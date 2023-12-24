@@ -77,6 +77,8 @@ abstract class Brick<T> extends AnyBrick<T, T> {
   }
 }
 
+const brick = MutableBrick.functional;
+
 abstract class MutableBrick<T> extends Brick<T> {
   MutableBrick();
 
@@ -96,10 +98,14 @@ abstract class MutableBrick<T> extends Brick<T> {
   T onUpdate(T newValue);
 
   void update(T newValue) {
+    final temp = _value;
     _value = onUpdate(newValue);
+    if (temp == _value) return;
     notifyListeners();
   }
 }
+
+const mutableBrick = MutableBrick.functional;
 
 // Impl
 

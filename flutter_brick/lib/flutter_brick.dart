@@ -9,19 +9,20 @@ abstract class BrickConsumerWidget extends Widget {
 
   /// Builds the [Widget] using the supplied [context] and [use].
   @protected
-  Widget build(BuildContext context, L Function<L>(Brick<L> brick) listen);
+  Widget build(
+      BuildContext context, T Function<T, R>(AnyBrick<T, R> brick) listen);
 }
 
 class _BrickConsumerElement extends ComponentElement {
   _BrickConsumerElement(BrickConsumerWidget super.widget);
 
-  final List<Brick> _bricks = [];
+  final List<AnyBrick> _bricks = [];
 
   void listener(_) {
     markNeedsBuild();
   }
 
-  L listen<L>(Brick<L> brick) {
+  T listen<T, R>(AnyBrick<T, R> brick) {
     brick.addListener(listener);
     _bricks.add(brick);
     return brick.read();
