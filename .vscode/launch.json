@@ -1,0 +1,47 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "example",
+            "cwd": "example",
+            "type": "dart",
+            "request": "launch",
+            "program": "lib/main.dart"
+        },
+        {
+            "name": "brick",
+            "cwd": "brick",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "flutter_brick",
+            "cwd": "flutter_brick",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "flutter_brick (profile mode)",
+            "cwd": "flutter_brick",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "flutter_brick (release mode)",
+            "cwd": "flutter_brick",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "pocketbase_brick",
+            "cwd": "pocketbase_brick",
+            "request": "launch",
+            "type": "dart"
+        }
+    ]
+}
