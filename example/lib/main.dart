@@ -24,19 +24,29 @@ final idBrick = mutableBrick(() => 'uol4xf9umd8n3fk');
 
 final titleBrick = mutableBrick(() => 'Hello World');
 
-final pbBrick = PocketbaseRecordBrick(
+final pbBrick = PocketbaseBrick(
   pocketbaseBrick: brick(() => PocketBase('https://joranmulderij.com/')),
   collectionNameBrick: brick(() => 'test'),
   recordIdBrick: idBrick,
+  fromJson: (json) => json,
+  toJson: (data) => data,
+);
+
+final pbStoreBrick = PocketbaseBrickStore(
+  pocketbaseBrick: brick(() => PocketBase('https://joranmulderij.com/')),
+  collectionNameBrick: brick(() => 'test'),
+  toJson: (data) => data,
+  fromJson: (json) => json,
 );
 
 class HomeScreen extends BrickConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, listen) {
-    final pb = listen(pbBrick);
-    final title = listen(titleBrick);
+  Widget build(BuildContext context, WidgetHandle handle) {
+    final pb = handle.listen(pbBrick);
+    final pbStore = handle.listen(pbStoreBrick.getAll(''));
+    final title = handle.listen(titleBrick);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Home'),
@@ -48,8 +58,12 @@ class HomeScreen extends BrickConsumerWidget {
             switch (pb) {
               AsyncLoading() => const CircularProgressIndicator(),
               AsyncError() => const Text('Error'),
-              AsyncData(:final value) =>
-                Text('Hello ${value.getStringValue('title')}'),
+              AsyncData(:final value) => Text('Hello ${value['title']}'),
+            },
+            switch (pbStore) {
+              AsyncLoading() => const CircularProgressIndicator(),
+              AsyncError() => const Text('Error'),
+              AsyncData(:final value) => Text('Hello ${value.length}'),
             },
             const SizedBox(height: 16),
             Text(title),

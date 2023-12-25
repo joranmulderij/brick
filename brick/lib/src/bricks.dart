@@ -11,6 +11,7 @@ sealed class AnyBrick<T, R> {
   int get listenerCount => _callbacks.length;
 
   T read();
+  T get value;
 
   @protected
   R onRead();
@@ -48,7 +49,7 @@ sealed class AnyBrick<T, R> {
   }
 
   @protected
-  L? listenOptional<L>(Brick<L>? brick) {
+  L? listenNullable<L>(Brick<L>? brick) {
     brick?.addListener(listener);
     return brick?.read();
   }
@@ -71,6 +72,9 @@ abstract class Brick<T> extends AnyBrick<T, T> {
     if (!_initialized) initialize();
     return _value;
   }
+
+  @override
+  T get value => read();
 
   @override
   void reset() {
@@ -154,9 +158,13 @@ abstract class AsyncBrick<T> extends AnyBrick<AsyncValue<T>, Future<T>> {
     _value = AsyncValue.loading();
   }
 
-  // factory AsyncBrick.functional(T Function() onRead) {
-  //   return AsyncBrickImpl(onRead);
-  // }
+  AsyncBrick.injected(T value) {
+    _value = AsyncValue.data(value);
+    _initialized = true;
+    onInitialize(_value);
+  }
+
+  late Future<T> _futureValue;
 
   @override
   AsyncValue<T> read() {
@@ -165,10 +173,19 @@ abstract class AsyncBrick<T> extends AnyBrick<AsyncValue<T>, Future<T>> {
   }
 
   @override
+  AsyncValue<T> get value => read();
+
+  Future<T> readFuture() {
+    if (!_initialized) initialize();
+    return _futureValue;
+  }
+
+  @override
   void reset() {
     _value = AsyncValue.loading();
     notifyListeners();
-    onRead().then((value) {
+    _futureValue = onRead();
+    _futureValue.then((value) {
       _value = AsyncValue.data(value);
       notifyListeners();
     });
@@ -176,7 +193,8 @@ abstract class AsyncBrick<T> extends AnyBrick<AsyncValue<T>, Future<T>> {
 
   @override
   void initialize() {
-    onRead().then((value) {
+    _futureValue = onRead();
+    _futureValue.then((value) {
       _value = AsyncValue.data(value);
       notifyListeners();
     });
@@ -186,19 +204,6 @@ abstract class AsyncBrick<T> extends AnyBrick<AsyncValue<T>, Future<T>> {
 
 abstract class AsyncMutableBrick<T> extends AsyncBrick<T> {
   AsyncMutableBrick();
-
-  // factory AsyncMutableBrick.functional(
-  //   T Function() onRead, [
-  //   T Function(T newValue)? onUpdate,
-  // ]) {
-  //   return AsyncMutableBrickImpl(onRead, onUpdate);
-  // }
-
-  @override
-  AsyncValue<T> read() {
-    if (!_initialized) initialize();
-    return _value;
-  }
 
   Future<T> onUpdate(T newValue);
 
@@ -211,53 +216,3 @@ abstract class AsyncMutableBrick<T> extends AsyncBrick<T> {
     });
   }
 }
-
-
-
-
-
-
-// abstract class AsyncMutableBrick<T> extends AnyBrick<AsyncValue<T>, Future<T>> {
-//   AsyncMutableBrick() {
-//     _value = AsyncValue.loading();
-//   }
-
-//   @override
-//   void notifyListeners() {
-//     for (final callback in _callbacks) {
-//       callback(_value);
-//     }
-//   }
-
-//   Future<void> update(T newValue) async {
-//     newValue = await onUpdate(newValue);
-//     _value = AsyncValue.data(newValue);
-//     notifyListeners();
-//   }
-
-//   @override
-//   AsyncValue<T> read() {
-//     if (!_initialized) {
-//       onRead().then((value) {
-//         _value = AsyncValue.data(value);
-//         notifyListeners();
-//       });
-//       _initialized = true;
-//     }
-//     return _value;
-//   }
-
-//   // AsyncValue<T> get value => _value;
-
-//   @override
-//   Future<void> reset() async {
-//     _value = AsyncValue.loading();
-//     notifyListeners();
-//     final newValue = await onRead();
-//     _value = AsyncValue.data(newValue);
-//     notifyListeners();
-//   }
-
-//   @protected
-//   Future<T> onUpdate(T newValue);
-// }

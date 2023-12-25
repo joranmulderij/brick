@@ -11,7 +11,7 @@ class BrickTextField extends BrickConsumerWidget {
   final TextEditingControllerBrick _controllerBrick;
 
   @override
-  Widget build(BuildContext context, listen) {
+  Widget build(BuildContext context, WidgetHandle handle) {
     return TextField(
       controller: _controllerBrick.read(),
     );
