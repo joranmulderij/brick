@@ -15,10 +15,14 @@ sealed class AnyBrick<T, R> {
   @protected
   R onRead();
 
+  @protected
+  @visibleForOverriding
+  void onInitialize(T value) {}
+
   void reset();
 
   void addListener(Callback<T> callback) {
-    initialize();
+    if (!_initialized) initialize();
     _callbacks.add(callback);
   }
 
@@ -44,6 +48,12 @@ sealed class AnyBrick<T, R> {
   }
 
   @protected
+  L? listenOptional<L>(Brick<L>? brick) {
+    brick?.addListener(listener);
+    return brick?.read();
+  }
+
+  @protected
   void initialize();
 }
 
@@ -58,7 +68,7 @@ abstract class Brick<T> extends AnyBrick<T, T> {
 
   @override
   T read() {
-    initialize();
+    if (!_initialized) initialize();
     return _value;
   }
 
@@ -70,9 +80,9 @@ abstract class Brick<T> extends AnyBrick<T, T> {
 
   @override
   void initialize() {
-    if (_initialized) return;
     _value = onRead();
     _initialized = true;
+    onInitialize(_value);
     notifyListeners();
   }
 }
@@ -91,7 +101,7 @@ abstract class MutableBrick<T> extends Brick<T> {
 
   @override
   T read() {
-    initialize();
+    if (!_initialized) initialize();
     return _value;
   }
 
@@ -150,7 +160,7 @@ abstract class AsyncBrick<T> extends AnyBrick<AsyncValue<T>, Future<T>> {
 
   @override
   AsyncValue<T> read() {
-    initialize();
+    if (!_initialized) initialize();
     return _value;
   }
 
@@ -166,7 +176,6 @@ abstract class AsyncBrick<T> extends AnyBrick<AsyncValue<T>, Future<T>> {
 
   @override
   void initialize() {
-    if (_initialized) return;
     onRead().then((value) {
       _value = AsyncValue.data(value);
       notifyListeners();
@@ -187,7 +196,7 @@ abstract class AsyncMutableBrick<T> extends AsyncBrick<T> {
 
   @override
   AsyncValue<T> read() {
-    initialize();
+    if (!_initialized) initialize();
     return _value;
   }
 

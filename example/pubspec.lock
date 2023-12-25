@@ -24,6 +24,13 @@ packages:
       relative: true
     source: path
     version: "1.0.0"
+  brick_widgets:
+    dependency: "direct main"
+    description:
+      path: "../brick_widgets"
+      relative: true
+    source: path
+    version: "1.0.0"
   characters:
     dependency: transitive
     description:

@@ -1,4 +1,5 @@
 import 'package:brick/brick.dart';
+import 'package:brick_widgets/brick_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_brick/flutter_brick.dart';
 import 'package:pocketbase/pocketbase.dart';
@@ -21,6 +22,8 @@ class App extends StatelessWidget {
 
 final idBrick = mutableBrick(() => 'uol4xf9umd8n3fk');
 
+final titleBrick = mutableBrick(() => 'Hello World');
+
 final pbBrick = PocketbaseRecordBrick(
   pocketbaseBrick: brick(() => PocketBase('https://joranmulderij.com/')),
   collectionNameBrick: brick(() => 'test'),
@@ -33,17 +36,27 @@ class HomeScreen extends BrickConsumerWidget {
   @override
   Widget build(BuildContext context, listen) {
     final pb = listen(pbBrick);
+    final title = listen(titleBrick);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Home'),
       ),
       body: Center(
-        child: switch (pb) {
-          AsyncLoading() => const CircularProgressIndicator(),
-          AsyncError() => const Text('Error'),
-          AsyncData(:final value) =>
-            Text('Hello ${value.getStringValue('title')}'),
-        },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            switch (pb) {
+              AsyncLoading() => const CircularProgressIndicator(),
+              AsyncError() => const Text('Error'),
+              AsyncData(:final value) =>
+                Text('Hello ${value.getStringValue('title')}'),
+            },
+            const SizedBox(height: 16),
+            Text(title),
+            const SizedBox(height: 16),
+            BrickTextField(titleBrick),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {

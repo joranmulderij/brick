@@ -8,8 +8,7 @@
             "name": "example",
             "cwd": "example",
             "type": "dart",
-            "request": "launch",
-            "program": "lib/main.dart"
+            "request": "launch"
         },
         {
             "name": "brick",
