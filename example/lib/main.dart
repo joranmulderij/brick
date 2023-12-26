@@ -20,33 +20,36 @@ class App extends StatelessWidget {
   }
 }
 
-final idBrick = mutableBrick(() => 'uol4xf9umd8n3fk');
+final idBrick = mutableBrick((handle) => 'uol4xf9umd8n3fk');
 
-final titleBrick = mutableBrick(() => 'Hello World');
+final titleBrick = mutableBrick((handle) => 'Hello World');
 
 final pbBrick = PocketbaseBrick(
-  pocketbaseBrick: brick(() => PocketBase('https://joranmulderij.com/')),
-  collectionNameBrick: brick(() => 'test'),
+  pocketbaseBrick: brick((handle) => PocketBase('https://joranmulderij.com/')),
+  collectionNameBrick: brick((handle) => 'test'),
   recordIdBrick: idBrick,
   fromJson: (json) => json,
   toJson: (data) => data,
 );
 
 final pbStoreBrick = PocketbaseBrickStore(
-  pocketbaseBrick: brick(() => PocketBase('https://joranmulderij.com/')),
-  collectionNameBrick: brick(() => 'test'),
+  pocketbaseBrick: brick((handle) => PocketBase('https://joranmulderij.com/')),
+  collectionNameBrick: brick((handle) => 'test'),
   toJson: (data) => data,
   fromJson: (json) => json,
 );
+
+final checkedBrick = mutableBrick((handle) => false);
 
 class HomeScreen extends BrickConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetHandle handle) {
+  Widget build(BuildContext context, BrickHandle handle) {
     final pb = handle.listen(pbBrick);
-    final pbStore = handle.listen(pbStoreBrick.getAll(''));
+    final pbStore = handle.listen(pbStoreBrick.query(PocketbaseQuery()));
     final title = handle.listen(titleBrick);
+    final checked = handle.listen(checkedBrick);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Home'),
@@ -69,6 +72,10 @@ class HomeScreen extends BrickConsumerWidget {
             Text(title),
             const SizedBox(height: 16),
             BrickTextField(titleBrick),
+            CheckboxListTile(
+              value: checked,
+              onChanged: (value) => checkedBrick.update(value ?? false),
+            ),
           ],
         ),
       ),

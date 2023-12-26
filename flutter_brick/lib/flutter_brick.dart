@@ -1,23 +1,14 @@
 import 'package:brick/brick.dart';
 import 'package:flutter/widgets.dart';
 
-class WidgetHandle {
-  const WidgetHandle(this.listener, this._bricks);
+class BrickConsumer extends BrickConsumerWidget {
+  const BrickConsumer({required this.builder, super.key});
 
-  final void Function(dynamic) listener;
-  final List<AnyBrick> _bricks;
+  final Widget Function(BuildContext context, BrickHandle handle) builder;
 
-  T listen<T, R>(AnyBrick<T, R> brick) {
-    brick.addListener(listener);
-    _bricks.add(brick);
-    return brick.read();
-  }
-
-  T? listenNullable<T, R>(AnyBrick<T, R>? brick) {
-    if (brick == null) return null;
-    brick.addListener(listener);
-    _bricks.add(brick);
-    return brick.read();
+  @override
+  Widget build(BuildContext context, BrickHandle handle) {
+    return builder(context, handle);
   }
 }
 
@@ -25,15 +16,15 @@ abstract class BrickConsumerWidget extends Widget {
   const BrickConsumerWidget({super.key});
 
   @override
-  Element createElement() => _BrickConsumerElement(this);
+  Element createElement() => BrickConsumerElement(this);
 
   /// Builds the [Widget] using the supplied [context] and [use].
   @protected
-  Widget build(BuildContext context, WidgetHandle handle);
+  Widget build(BuildContext context, BrickHandle handle);
 }
 
-class _BrickConsumerElement extends ComponentElement {
-  _BrickConsumerElement(BrickConsumerWidget super.widget);
+class BrickConsumerElement extends ComponentElement {
+  BrickConsumerElement(BrickConsumerWidget super.widget);
 
   final List<AnyBrick> _bricks = [];
 
@@ -46,8 +37,15 @@ class _BrickConsumerElement extends ComponentElement {
     final consumer = super.widget as BrickConsumerWidget;
     return consumer.build(
       this,
-      WidgetHandle(listener, _bricks),
+      BrickHandle(listener, _bricks),
     );
+  }
+
+  @override
+  void update(BrickConsumerWidget newWidget) {
+    super.update(newWidget);
+    assert(widget == newWidget);
+    rebuild(force: true);
   }
 
   @override

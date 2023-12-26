@@ -1,24 +1,23 @@
 import 'package:brick/brick.dart';
 
-abstract class AsyncBrickStore<K, V, Q, B1 extends AsyncBrick<V>,
-    B2 extends AsyncBrick<List<V>>> {
-  final Map<K, B1> _oneCache = {};
-  final Map<Q, B2> _allCache = {};
+abstract class AsyncBrickStore<K, V, Q> {
+  final Map<K, AsyncBrick<V>> _oneCache = {};
+  final Map<Q, AsyncBrick<List<V>>> _allCache = {};
 
-  B2 onGetAll(Q query);
+  AsyncBrick<List<V>> onQuery(Q query);
 
-  B1 onGetOne(K id);
+  AsyncBrick<V> onOne(K id);
 
-  B1 getOne(K id) {
+  AsyncBrick<V> one(K id) {
     if (_oneCache.containsKey(id)) return _oneCache[id]!;
-    final brick = onGetOne(id);
+    final brick = onOne(id);
     _oneCache[id] = brick;
     return brick;
   }
 
-  B2 getAll(Q query) {
+  AsyncBrick<List<V>> query(Q query) {
     if (_allCache.containsKey(query)) return _allCache[query]!;
-    final brick = onGetAll(query);
+    final brick = onQuery(query);
     _allCache[query] = brick;
     return brick;
   }

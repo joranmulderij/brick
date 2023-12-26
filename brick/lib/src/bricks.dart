@@ -1,12 +1,13 @@
-import 'package:brick/src/async_value.dart';
+import 'package:brick/brick.dart';
 import 'package:brick/src/utils.dart';
 import 'package:meta/meta.dart';
 
 sealed class AnyBrick<T, R> {
-  AnyBrick();
+  AnyBrick() {
+    initialize();
+  }
 
   late T _value;
-  bool _initialized = false;
   final Set<Callback<T>> _callbacks = {};
   int get listenerCount => _callbacks.length;
 
@@ -23,7 +24,6 @@ sealed class AnyBrick<T, R> {
   void reset();
 
   void addListener(Callback<T> callback) {
-    if (!_initialized) initialize();
     _callbacks.add(callback);
   }
 
@@ -63,13 +63,12 @@ sealed class AnyBrick<T, R> {
 abstract class Brick<T> extends AnyBrick<T, T> {
   Brick();
 
-  factory Brick.functional(T Function() onRead) {
+  factory Brick.functional(T Function(BrickHandle) onRead) {
     return BrickImpl(onRead);
   }
 
   @override
   T read() {
-    if (!_initialized) initialize();
     return _value;
   }
 
@@ -85,29 +84,30 @@ abstract class Brick<T> extends AnyBrick<T, T> {
   @override
   void initialize() {
     _value = onRead();
-    _initialized = true;
     onInitialize(_value);
     notifyListeners();
   }
 }
 
-const brick = MutableBrick.functional;
+const brick = Brick.functional;
 
 abstract class MutableBrick<T> extends Brick<T> {
   MutableBrick();
 
   factory MutableBrick.functional(
-    T Function() onRead, [
-    T Function(T newValue)? onUpdate,
+    T Function(BrickHandle) onRead, [
+    T Function(BrickHandle, T newValue)? onUpdate,
   ]) {
     return MutableBrickImpl(onRead, onUpdate);
   }
 
   @override
   T read() {
-    if (!_initialized) initialize();
     return _value;
   }
+
+  // Not sure if this is a good idea.
+  // set value(T newValue) => update(newValue);
 
   T onUpdate(T newValue);
 
@@ -126,28 +126,28 @@ const mutableBrick = MutableBrick.functional;
 class BrickImpl<T> extends Brick<T> {
   BrickImpl(this._onRead);
 
-  final T Function() _onRead;
+  final T Function(BrickHandle) _onRead;
 
   @override
   T onRead() {
-    return _onRead();
+    return _onRead(BrickHandle(listener, []));
   }
 }
 
 class MutableBrickImpl<T> extends MutableBrick<T> {
   MutableBrickImpl(this._onRead, this._onUpdate);
 
-  final T Function() _onRead;
-  final T Function(T newValue)? _onUpdate;
+  final T Function(BrickHandle) _onRead;
+  final T Function(BrickHandle, T newValue)? _onUpdate;
 
   @override
   T onRead() {
-    return _onRead();
+    return _onRead(BrickHandle(listener, []));
   }
 
   @override
   T onUpdate(T newValue) {
-    return _onUpdate?.call(newValue) ?? newValue;
+    return _onUpdate?.call(BrickHandle(listener, []), newValue) ?? newValue;
   }
 }
 
@@ -160,7 +160,6 @@ abstract class AsyncBrick<T> extends AnyBrick<AsyncValue<T>, Future<T>> {
 
   AsyncBrick.injected(T value) {
     _value = AsyncValue.data(value);
-    _initialized = true;
     onInitialize(_value);
   }
 
@@ -168,7 +167,6 @@ abstract class AsyncBrick<T> extends AnyBrick<AsyncValue<T>, Future<T>> {
 
   @override
   AsyncValue<T> read() {
-    if (!_initialized) initialize();
     return _value;
   }
 
@@ -176,7 +174,6 @@ abstract class AsyncBrick<T> extends AnyBrick<AsyncValue<T>, Future<T>> {
   AsyncValue<T> get value => read();
 
   Future<T> readFuture() {
-    if (!_initialized) initialize();
     return _futureValue;
   }
 
@@ -198,7 +195,6 @@ abstract class AsyncBrick<T> extends AnyBrick<AsyncValue<T>, Future<T>> {
       _value = AsyncValue.data(value);
       notifyListeners();
     });
-    _initialized = true;
   }
 }
 
@@ -214,5 +210,27 @@ abstract class AsyncMutableBrick<T> extends AsyncBrick<T> {
       _value = AsyncValue.data(value);
       notifyListeners();
     });
+  }
+}
+
+// Stream ----------------------------------------------------------------------
+
+class StreamBrick<T> extends AsyncBrick<T> {
+  StreamBrick(this._stream);
+
+  final Stream<T> _stream;
+
+  @override
+  Future<T> onRead() {
+    return _stream.first;
+  }
+
+  @override
+  void onInitialize(AsyncValue<T> value) {
+    _stream.listen((value) {
+      _value = AsyncValue.data(value);
+      notifyListeners();
+    });
+    super.onInitialize(value);
   }
 }

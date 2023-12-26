@@ -4,6 +4,7 @@ sealed class AsyncValue<T> {
   factory AsyncValue.error(Object error) => AsyncError<T>(error);
 
   final T? value = null;
+  final Object? error = null;
 }
 
 class AsyncLoading<T> implements AsyncValue<T> {
@@ -11,6 +12,8 @@ class AsyncLoading<T> implements AsyncValue<T> {
 
   @override
   final T? value = null;
+  @override
+  final Object? error = null;
 }
 
 class AsyncData<T> implements AsyncValue<T> {
@@ -18,11 +21,14 @@ class AsyncData<T> implements AsyncValue<T> {
 
   @override
   final T value;
+  @override
+  final Object? error = null;
 }
 
 class AsyncError<T> implements AsyncValue<T> {
   AsyncError(this.error);
 
+  @override
   final Object error;
 
   @override

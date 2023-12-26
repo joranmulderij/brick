@@ -37,33 +37,79 @@ class PocketbaseBrick<T> extends AsyncMutableBrick<T> {
   }
 }
 
-class PocketbaseFullListBrick<T> extends AsyncBrick<List<T>> {
-  PocketbaseFullListBrick({
+class PocketbaseListBrick<T> extends AsyncBrick<List<T>> {
+  PocketbaseListBrick({
     required this.pocketbaseBrick,
     required this.collectionNameBrick,
-    required this.filterBrick,
+    required this.queryBrick,
     required this.fromJson,
   });
 
   final Brick<PocketBase> pocketbaseBrick;
   final Brick<String> collectionNameBrick;
-  final Brick<String?>? filterBrick;
+  final Brick<PocketbaseQuery> queryBrick;
   final T Function(Map<String, dynamic>) fromJson;
 
   @override
   Future<List<T>> onRead() async {
     final pocketbase = listen(pocketbaseBrick);
     final collectionName = listen(collectionNameBrick);
-    final filter = listenNullable(filterBrick);
-    final res = await pocketbase.collection(collectionName).getFullList(
-          filter: filter,
-        );
+    final query = listen(queryBrick);
+    final res = switch (query.perPage) {
+      null => await pocketbase.collection(collectionName).getFullList(
+            filter: query.filter,
+            sort: query.sort,
+          ),
+      _ => (await pocketbase.collection(collectionName).getList(
+                filter: query.filter,
+                sort: query.sort,
+                perPage: query.perPage!,
+                page: query.page,
+              ))
+          .items,
+    };
     return res.map((e) => fromJson(e.toJson())).toList();
   }
 }
 
-class PocketbaseBrickStore<T> extends AsyncBrickStore<String, T, String,
-    PocketbaseBrick<T>, PocketbaseFullListBrick<T>> {
+class PocketbaseQuery {
+  PocketbaseQuery({
+    this.filter,
+    this.sort,
+    this.perPage = 30,
+    this.page = 1,
+  });
+
+  PocketbaseQuery.all({
+    this.filter,
+    this.sort,
+    this.page = 1,
+  }) : perPage = null;
+
+  final String? filter;
+  final String? sort;
+  final int? perPage;
+  final int page;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is PocketbaseQuery &&
+        other.filter == filter &&
+        other.sort == sort &&
+        other.perPage == perPage &&
+        other.page == page;
+  }
+
+  @override
+  int get hashCode {
+    return filter.hashCode ^ sort.hashCode ^ perPage.hashCode ^ page.hashCode;
+  }
+}
+
+class PocketbaseBrickStore<T>
+    extends AsyncBrickStore<String, T, PocketbaseQuery> {
   PocketbaseBrickStore({
     required this.pocketbaseBrick,
     required this.collectionNameBrick,
@@ -83,22 +129,22 @@ class PocketbaseBrickStore<T> extends AsyncBrickStore<String, T, String,
   }
 
   @override
-  PocketbaseBrick<T> onGetOne(String id) {
+  PocketbaseBrick<T> onOne(String id) {
     return PocketbaseBrick(
       pocketbaseBrick: pocketbaseBrick,
       collectionNameBrick: collectionNameBrick,
-      recordIdBrick: mutableBrick(() => id),
+      recordIdBrick: mutableBrick((handle) => id),
       fromJson: fromJson,
       toJson: toJson,
     );
   }
 
   @override
-  PocketbaseFullListBrick<T> onGetAll(query) {
-    return PocketbaseFullListBrick(
+  PocketbaseListBrick<T> onQuery(query) {
+    return PocketbaseListBrick(
       pocketbaseBrick: pocketbaseBrick,
       collectionNameBrick: collectionNameBrick,
-      filterBrick: constBrick(query),
+      queryBrick: constBrick(query),
       fromJson: fromJson,
     );
   }
