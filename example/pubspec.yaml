@@ -36,6 +36,8 @@ dependencies:
     path: ../pocketbase_brick
   brick_widgets:
     path: ../brick_widgets
+  hooks_brick:
+    path: ../hooks_brick
   flutter:
     sdk: flutter
 

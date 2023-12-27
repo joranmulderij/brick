@@ -13,7 +13,13 @@ class AsyncConverterBrick<F, T> extends AsyncBrick<T> {
 
   @override
   Future<T> onRead() {
-    return _brick.readFuture().then(from);
+    return _brick.read().futureValue.then(from);
+  }
+
+  @override
+  void reset() {
+    _brick.reset();
+    super.reset();
   }
 }
 
@@ -30,7 +36,7 @@ class AsyncMutableConverterBrick<F, T> extends AsyncMutableBrick<T> {
 
   @override
   Future<T> onRead() {
-    return _brick.readFuture().then(from);
+    return _brick.read().futureValue.then(from);
   }
 
   @override

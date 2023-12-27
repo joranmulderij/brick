@@ -15,6 +15,10 @@ abstract class AsyncBrickStore<K, V, Q> {
     return brick;
   }
 
+  List<AsyncBrick<V>> many(List<K> ids) {
+    return ids.map((id) => one(id)).toList();
+  }
+
   AsyncBrick<List<V>> query(Q query) {
     if (_allCache.containsKey(query)) return _allCache[query]!;
     final brick = onQuery(query);

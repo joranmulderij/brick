@@ -60,6 +60,8 @@ sealed class AnyBrick<T, R> {
 
 // Sync ------------------------------------------------------------------------
 
+const brick = Brick.functional;
+
 abstract class Brick<T> extends AnyBrick<T, T> {
   Brick();
 
@@ -89,7 +91,7 @@ abstract class Brick<T> extends AnyBrick<T, T> {
   }
 }
 
-const brick = Brick.functional;
+const mutableBrick = MutableBrick.functional;
 
 abstract class MutableBrick<T> extends Brick<T> {
   MutableBrick();
@@ -118,8 +120,6 @@ abstract class MutableBrick<T> extends Brick<T> {
     notifyListeners();
   }
 }
-
-const mutableBrick = MutableBrick.functional;
 
 // Impl
 
@@ -153,17 +153,19 @@ class MutableBrickImpl<T> extends MutableBrick<T> {
 
 // Async -----------------------------------------------------------------------
 
+const asyncBrick = AsyncBrick.functional;
+
 abstract class AsyncBrick<T> extends AnyBrick<AsyncValue<T>, Future<T>> {
-  AsyncBrick() {
-    _value = AsyncValue.loading();
+  AsyncBrick();
+
+  factory AsyncBrick.functional(Future<T> Function(BrickHandle) onRead) {
+    return AsyncBrickImpl(onRead);
   }
 
   AsyncBrick.injected(T value) {
-    _value = AsyncValue.data(value);
+    _value = AsyncValue.data(value, Future.value(value));
     onInitialize(_value);
   }
-
-  late Future<T> _futureValue;
 
   @override
   AsyncValue<T> read() {
@@ -173,43 +175,82 @@ abstract class AsyncBrick<T> extends AnyBrick<AsyncValue<T>, Future<T>> {
   @override
   AsyncValue<T> get value => read();
 
-  Future<T> readFuture() {
-    return _futureValue;
-  }
-
   @override
   void reset() {
-    _value = AsyncValue.loading();
+    final futureValue = onRead();
+    _value = AsyncValue.loading(futureValue);
     notifyListeners();
-    _futureValue = onRead();
-    _futureValue.then((value) {
-      _value = AsyncValue.data(value);
+    futureValue.then((value) {
+      _value = AsyncValue.data(value, futureValue);
       notifyListeners();
     });
   }
 
   @override
   void initialize() {
-    _futureValue = onRead();
-    _futureValue.then((value) {
-      _value = AsyncValue.data(value);
+    final futureValue = onRead();
+    _value = AsyncValue.loading(futureValue);
+    futureValue.then((value) {
+      _value = AsyncValue.data(value, futureValue);
+      onInitialize(_value);
       notifyListeners();
     });
   }
 }
 
+const asyncMutableBrick = AsyncMutableBrick.functional;
+
 abstract class AsyncMutableBrick<T> extends AsyncBrick<T> {
   AsyncMutableBrick();
 
+  factory AsyncMutableBrick.functional(
+    Future<T> Function(BrickHandle) onRead, [
+    Future<T> Function(BrickHandle, T newValue)? onUpdate,
+  ]) {
+    return AsyncMutableBrickImpl(onRead, onUpdate);
+  }
+
   Future<T> onUpdate(T newValue);
 
-  void update(T newValue) {
-    _value = AsyncValue.loading();
+  Future<void> update(T newValue) async {
+    final futureValue = onUpdate(newValue);
+    _value = AsyncValue.loading(futureValue);
     notifyListeners();
-    onUpdate(newValue).then((value) {
-      _value = AsyncValue.data(value);
+    await futureValue.then((value) {
+      _value = AsyncValue.data(value, futureValue);
       notifyListeners();
     });
+  }
+}
+
+// Impl ------------------------------------------------------------------------
+
+class AsyncBrickImpl<T> extends AsyncBrick<T> {
+  AsyncBrickImpl(this._onRead);
+
+  final Future<T> Function(BrickHandle) _onRead;
+
+  @override
+  Future<T> onRead() {
+    return _onRead(BrickHandle(listener, []));
+  }
+}
+
+class AsyncMutableBrickImpl<T> extends AsyncMutableBrick<T> {
+  AsyncMutableBrickImpl(this._onRead, this._onUpdate);
+
+  final Future<T> Function(BrickHandle) _onRead;
+  final Future<T> Function(BrickHandle, T newValue)? _onUpdate;
+
+  @override
+  Future<T> onRead() {
+    return _onRead(BrickHandle(listener, []));
+  }
+
+  @override
+  Future<T> onUpdate(T newValue) {
+    return _onUpdate?.call(BrickHandle(listener, []), newValue) ??
+        Future.value(newValue);
   }
 }
 
@@ -228,7 +269,7 @@ class StreamBrick<T> extends AsyncBrick<T> {
   @override
   void onInitialize(AsyncValue<T> value) {
     _stream.listen((value) {
-      _value = AsyncValue.data(value);
+      _value = AsyncValue.data(value, Future.value(value));
       notifyListeners();
     });
     super.onInitialize(value);

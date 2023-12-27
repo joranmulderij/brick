@@ -1,6 +1,7 @@
 name: hooks_brick
 description: A sample command-line application.
 version: 1.0.0
+publish_to: 'none'
 # repository: https://github.com/my_org/my_repo
 
 environment:
@@ -13,6 +14,8 @@ dependencies:
   flutter_hooks: ^0.20.3
   flutter_brick:
     path: ../flutter_brick
+  flutter:
+    sdk: flutter
   # path: ^1.8.0
 
 dev_dependencies:

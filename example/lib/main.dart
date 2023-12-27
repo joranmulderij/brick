@@ -1,7 +1,8 @@
 import 'package:brick/brick.dart';
 import 'package:brick_widgets/brick_widgets.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_brick/flutter_brick.dart';
+import 'package:hooks_brick/hooks_brick.dart';
+import 'package:hooks_brick/use_brick.dart';
 import 'package:pocketbase/pocketbase.dart';
 import 'package:pocketbase_brick/pocketbase_brick.dart';
 
@@ -39,9 +40,9 @@ final pbStoreBrick = PocketbaseBrickStore(
   fromJson: (json) => json,
 );
 
-final checkedBrick = mutableBrick((handle) => false);
+final counterBrick = mutableBrick((handle) => 0);
 
-class HomeScreen extends BrickConsumerWidget {
+class HomeScreen extends HookBrickConsumerWidget {
   const HomeScreen({super.key});
 
   @override
@@ -49,35 +50,50 @@ class HomeScreen extends BrickConsumerWidget {
     final pb = handle.listen(pbBrick);
     final pbStore = handle.listen(pbStoreBrick.query(PocketbaseQuery()));
     final title = handle.listen(titleBrick);
-    final checked = handle.listen(checkedBrick);
+    final checkedBrick = useMutableBrick((handle) => false);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Home'),
       ),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            switch (pb) {
-              AsyncLoading() => const CircularProgressIndicator(),
-              AsyncError() => const Text('Error'),
-              AsyncData(:final value) => Text('Hello ${value['title']}'),
-            },
-            switch (pbStore) {
-              AsyncLoading() => const CircularProgressIndicator(),
-              AsyncError() => const Text('Error'),
-              AsyncData(:final value) => Text('Hello ${value.length}'),
-            },
-            const SizedBox(height: 16),
-            Text(title),
-            const SizedBox(height: 16),
-            BrickTextField(titleBrick),
-            CheckboxListTile(
-              value: checked,
-              onChanged: (value) => checkedBrick.update(value ?? false),
+      body: Row(
+        children: [
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                switch (pb) {
+                  AsyncLoading() => const CircularProgressIndicator(),
+                  AsyncError() => const Text('Error'),
+                  AsyncData(:final value) => Text('Hello ${value['title']}'),
+                },
+                switch (pbStore) {
+                  AsyncLoading() => const CircularProgressIndicator(),
+                  AsyncError() => const Text('Error'),
+                  AsyncData(:final value) => Text('Hello ${value.length}'),
+                },
+                const SizedBox(height: 16),
+                Text(title),
+                const SizedBox(height: 16),
+                BrickTextField(titleBrick),
+                TextButton(
+                  onPressed: () {
+                    counterBrick.update(counterBrick.value + 1);
+                  },
+                  child: const Text('increment'),
+                ),
+                Text(handle.listen(counterBrick).toString()),
+              ],
             ),
-          ],
-        ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemBuilder: (context, index) {
+                return const TestWidget();
+              },
+              itemCount: 100,
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -85,6 +101,22 @@ class HomeScreen extends BrickConsumerWidget {
         },
         child: const Icon(Icons.add),
       ),
+    );
+  }
+}
+
+class TestWidget extends HookBrickConsumerWidget {
+  const TestWidget({super.key});
+
+  @override
+  Widget build(BuildContext context, BrickHandle handle) {
+    final checkedBrick = useMutableBrick((handle) {
+      handle.listen(counterBrick);
+      return false;
+    });
+    return CheckboxListTile(
+      value: checkedBrick.value,
+      onChanged: (value) => checkedBrick.update(value ?? false),
     );
   }
 }
