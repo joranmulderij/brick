@@ -30,14 +30,15 @@ environment:
 dependencies:
   brick:
     path: ../brick
-  flutter_brick:
-    path: ../flutter_brick
-  pocketbase_brick:
-    path: ../pocketbase_brick
-  brick_widgets:
-    path: ../brick_widgets
+  # flutter_brick:
+  #   path: ../flutter_brick
+  # pocketbase_brick:
+  #   path: ../pocketbase_brick
+  # brick_widgets:
+  #   path: ../brick_widgets
   hooks_brick:
     path: ../hooks_brick
+  flutter_hooks: ^0.20.3
   flutter:
     sdk: flutter
 

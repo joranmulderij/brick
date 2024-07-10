@@ -1,27 +1,30 @@
-import 'package:brick/brick.dart';
 import 'package:brick/src/utils.dart';
-import 'package:meta/meta.dart';
 
 sealed class AnyBrick<T, R> {
   AnyBrick() {
-    initialize();
+    _initialize();
   }
 
   late T _value;
+
   final Set<Callback<T>> _callbacks = {};
-  int get listenerCount => _callbacks.length;
+  final Set<AnyBrick<dynamic, dynamic>> _bricksListeningTo = {};
 
-  T read();
-  T get value;
-
-  @protected
-  R onRead();
-
-  @protected
-  @visibleForOverriding
-  void onInitialize(T value) {}
+  T get value => _value;
 
   void reset();
+
+  void _initialize();
+
+  // L listen<L>(Brick<L> brick) {
+  //   brick.addListener(listener);
+  //   return brick.read();
+  // }
+
+  // L? listenNullable<L>(Brick<L>? brick) {
+  //   brick?.addListener(listener);
+  //   return brick?.read();
+  // }
 
   void addListener(Callback<T> callback) {
     _callbacks.add(callback);
@@ -31,69 +34,78 @@ sealed class AnyBrick<T, R> {
     _callbacks.remove(callback);
   }
 
-  @protected
-  void notifyListeners() {
+  void _notifyListeners() {
     for (final callback in _callbacks.toSet()) {
       callback(_value);
     }
   }
 
-  void listener(_) {
+  void _listener<T2>(T2 _) {
     reset();
   }
 
-  @protected
-  L listen<L>(Brick<L> brick) {
-    brick.addListener(listener);
-    return brick.read();
+  void _listenToBrick<T2, R2>(AnyBrick<T2, R2> brick) {
+    brick.addListener(_listener);
+    _bricksListeningTo.add(brick);
   }
 
-  @protected
-  L? listenNullable<L>(Brick<L>? brick) {
-    brick?.addListener(listener);
-    return brick?.read();
+  void dispose() {
+    for (final brick in _bricksListeningTo) {
+      brick.removeListener(_listener);
+    }
   }
-
-  @protected
-  void initialize();
 }
 
 // Sync ------------------------------------------------------------------------
 
-const brick = Brick.functional;
+class Brick<T> extends AnyBrick<T, T> {
+  Brick(this._onRead);
 
-abstract class Brick<T> extends AnyBrick<T, T> {
-  Brick();
-
-  factory Brick.functional(T Function(BrickHandle) onRead) {
-    return BrickImpl(onRead);
-  }
+  final T Function(BrickHandle<T, T> handle) _onRead;
 
   @override
-  T read() {
-    return _value;
-  }
+  void reset() => _initialize();
 
   @override
-  T get value => read();
-
-  @override
-  void reset() {
-    _value = onRead();
-    notifyListeners();
-  }
-
-  @override
-  void initialize() {
-    _value = onRead();
-    onInitialize(_value);
-    notifyListeners();
+  void _initialize() {
+    _value = _onRead(BrickHandle(this));
+    _notifyListeners();
   }
 }
 
+class MutableBrick<T> extends Brick<T> {
+  MutableBrick(super._onRead);
+
+  void update(T newValue) {
+    _value = newValue;
+    _notifyListeners();
+  }
+}
+
+class BrickHandle<T, R> {
+  const BrickHandle(this._brick);
+
+  final AnyBrick<T, R> _brick;
+
+  T2 call<T2, R2>(AnyBrick<T2, R2> brick) => listen(brick);
+
+  T2 listen<T2, R2>(AnyBrick<T2, R2> brick) {
+    _brick._listenToBrick(brick);
+    return brick.value;
+  }
+
+  T2? listenNullable<T2, R2>(AnyBrick<T2, R2>? brick) {
+    if (brick == null) return null;
+    _brick._listenToBrick(brick);
+    return brick.value;
+  }
+}
+
+
+/*
 const mutableBrick = MutableBrick.functional;
 
-abstract class MutableBrick<T> extends Brick<T> {
+sealed class MutableBrick<T> extends Brick<T> {
   MutableBrick();
 
   factory MutableBrick.functional(
@@ -126,8 +138,6 @@ abstract class MutableBrick<T> extends Brick<T> {
 class BrickImpl<T> extends Brick<T> {
   BrickImpl(this._onRead);
 
-  final T Function(BrickHandle) _onRead;
-
   @override
   T onRead() {
     return _onRead(BrickHandle(listener, []));
@@ -137,6 +147,7 @@ class BrickImpl<T> extends Brick<T> {
 class MutableBrickImpl<T> extends MutableBrick<T> {
   MutableBrickImpl(this._onRead, this._onUpdate);
 
+  @override
   final T Function(BrickHandle) _onRead;
   final T Function(BrickHandle, T newValue)? _onUpdate;
 
@@ -275,3 +286,4 @@ class StreamBrick<T> extends AsyncBrick<T> {
     super.onInitialize(value);
   }
 }
+*/

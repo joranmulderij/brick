@@ -17,6 +17,7 @@ class TextEditingControllerBrick extends Brick<TextEditingController> {
   @override
   void onInitialize(value) {
     initialTextBrick?.addListener((newTextValue) {
+      if (newTextValue == value.text) return;
       value.text = newTextValue;
     });
     value.addListener(() {

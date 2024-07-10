@@ -2,47 +2,32 @@ import 'package:brick/brick.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 
-Brick<T> useBrick<T>(T Function(BrickHandle handle) onRead) {
-  return use(_BrickHook<T, Brick<T>>(onRead: onRead, brickBuilder: brick));
+T useBrick<T>(Brick<T> brick) {
+  return use(_BrickHook<T>(brick)).value;
 }
 
-MutableBrick<T> useMutableBrick<T>(T Function(BrickHandle handle) onRead) {
-  return use(_BrickHook<T, MutableBrick<T>>(
-    onRead: onRead,
-    brickBuilder: mutableBrick,
-  ));
-}
+class _BrickHook<T> extends Hook<Brick<T>> {
+  const _BrickHook(this.brick);
 
-B useOtherBrick<T, B extends Brick<T>>(B brick) {
-  return use(_BrickHook<T, B>(
-    onRead: (handle) => brick.value, // return value never gets used
-    brickBuilder: (onRead) => brick,
-  ));
-}
-
-class _BrickHook<T, B extends Brick<T>> extends Hook<B> {
-  const _BrickHook({required this.onRead, required this.brickBuilder});
-
-  final T Function(BrickHandle handle) onRead;
-  final B Function(T Function(BrickHandle)) brickBuilder;
+  final Brick<T> brick;
 
   @override
-  _BrickHookState<T, B> createState() => _BrickHookState<T, B>();
+  _BrickHookState<T> createState() => _BrickHookState<T>();
 }
 
-class _BrickHookState<T, B extends Brick<T>>
-    extends HookState<B, _BrickHook<T, B>> {
-  late final _state = hook.brickBuilder(hook.onRead)..addListener(_listener);
+class _BrickHookState<T> extends HookState<Brick<T>, _BrickHook<T>> {
+  late final Brick<T> _state;
 
   @override
-  void dispose() {
-    // _state.dispose();
+  void initHook() {
+    _state = hook.brick..addListener(_listener);
+    super.initHook();
   }
 
   @override
-  B build(BuildContext context) => _state;
+  Brick<T> build(BuildContext context) => _state;
 
-  void _listener(dynamic _) {
+  void _listener<T2>(T2 _) {
     setState(() {});
   }
 
